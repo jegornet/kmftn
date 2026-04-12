@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 rootProject.name = "kmftn"
 include(":base")
 include(":binkpclient")
+include(":ftnpkt")

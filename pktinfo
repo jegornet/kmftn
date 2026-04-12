@@ -1,0 +1,7 @@
+#!/bin/sh
+if [ -z "$1" ]; then
+    echo "Usage: $0 path/to/filename.pkt"
+    exit 1
+fi
+
+./gradlew :ftnpkt:jvmRun --args="$1"
