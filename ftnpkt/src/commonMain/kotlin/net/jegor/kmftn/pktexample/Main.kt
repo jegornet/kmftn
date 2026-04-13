@@ -24,7 +24,7 @@ internal fun main(args: Array<String>) {
             println("  capWord:      0x${pkt.capWord.toString(16)}")
             println("  origPoint:    ${pkt.origPoint}")
             println("  destPoint:    ${pkt.destPoint}")
-            println("  prodData:     ${pkt.prodData.hex()}")
+            println("  prodData:     ${pkt.prodData.display()}")
         }
         is Pkt2e -> {
             println("Packet type: Type-2e (FSC-0039)")
@@ -38,12 +38,12 @@ internal fun main(args: Array<String>) {
             println("  capWord:      0x${pkt.capWord.toString(16)}")
             println("  origPoint:    ${pkt.origPoint}")
             println("  destPoint:    ${pkt.destPoint}")
-            println("  prodData:     ${pkt.prodData.hex()}")
+            println("  prodData:     ${pkt.prodData.display()}")
         }
         is Pkt2 -> {
             println("Packet type: Type-2 Stone Age (FTS-0001)")
             printCommonFields(pkt)
-            println("  fill:         ${pkt.fill.hex()}")
+            println("  fill:         ${pkt.fill.display()}")
         }
     }
 
@@ -59,11 +59,11 @@ internal fun main(args: Array<String>) {
         println("  destNet:      ${msg.destNet}")
         println("  attribute:    0x${msg.attribute.toString(16)}${formatAttributes(msg)}")
         println("  cost:         ${msg.cost}")
-        println("  dateTime:     ${msg.dateTime.hex()}")
-        println("  toUserName:   ${msg.toUserName.hex()}")
-        println("  fromUserName: ${msg.fromUserName.hex()}")
-        println("  subject:      ${msg.subject.hex()}")
-        println("  text:         ${msg.text.hex()}")
+        println("  dateTime:     ${msg.dateTime.display()}")
+        println("  toUserName:   ${msg.toUserName.display()}")
+        println("  fromUserName: ${msg.fromUserName.display()}")
+        println("  subject:      ${msg.subject.display()}")
+        println("  text:         ${msg.text.display()}")
     }
 }
 
@@ -83,7 +83,7 @@ private fun printCommonFields(pkt: Pkt) {
     println("  destZone:     ${pkt.destZone}")
     println("  prodCodeLo:   ${pkt.prodCodeLo}")
     println("  prodRevMajor: ${pkt.prodRevMajor}")
-    println("  password:     ${pkt.password.hex()}")
+    println("  password:     ${pkt.password.display()}")
 }
 
 private fun formatAttributes(msg: PackedMsg): String {
@@ -107,7 +107,11 @@ private fun formatAttributes(msg: PackedMsg): String {
     return if (flags.isEmpty()) "" else " (${flags.joinToString(", ")})"
 }
 
-private fun ByteArray.hex(): String {
+private fun ByteArray.display(): String {
     if (isEmpty()) return "(empty)"
-    return joinToString(" ") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
+    return joinToString(" ") {
+        val b = it.toInt() and 0xFF
+        if (b in 32..126) b.toChar().toString()
+        else "0x${b.toString(16).padStart(2, '0')}"
+    }
 }
