@@ -18,4 +18,3 @@ kotlincrypto-hash-sha1 = { group = "org.kotlincrypto.hash", name = "sha1", versi
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-maven-publish = { id = "com.vanniktech.maven.publish", version = "0.30.0" }

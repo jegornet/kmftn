@@ -4,7 +4,6 @@ import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.maven.publish)
 }
 
 kotlin {
@@ -46,30 +45,4 @@ tasks.register<JavaExec>("jvmRun") {
     classpath = kotlin.jvm().compilations["main"].runtimeDependencyFiles +
         kotlin.jvm().compilations["main"].output.allOutputs
     mainClass.set("net.jegor.kmftn.pktexample.MainKt")
-}
-
-mavenPublishing {
-    pom {
-        name.set("kmftn-ftnpkt")
-        description.set("Library for handling packets and packed messages")
-        url.set("https://github.com/jegornet/kmftn")
-        licenses {
-            license {
-                name.set("MIT License")
-                url.set("https://opensource.org/licenses/MIT")
-                distribution.set("repo")
-            }
-        }
-        developers {
-            developer {
-                id.set("jegornet")
-                name.set("Jegor")
-            }
-        }
-        scm {
-            url.set("https://github.com/jegornet/kmftn")
-            connection.set("scm:git:git://github.com/jegornet/kmftn.git")
-            developerConnection.set("scm:git:ssh://github.com/jegornet/kmftn.git")
-        }
-    }
 }

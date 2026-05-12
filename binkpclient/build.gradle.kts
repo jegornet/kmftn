@@ -4,7 +4,6 @@ import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.maven.publish)
 }
 
 val versionName = findProperty("VERSION_NAME") as String
@@ -73,30 +72,4 @@ kotlin {
 // Integration tests require fork()/exec() which are unavailable on iOS
 tasks.matching { it.name.matches(Regex(".*[Tt]est.*[Ii]os.*|.*[Ii]os.*[Tt]est.*")) }.configureEach {
     enabled = false
-}
-
-mavenPublishing {
-    pom {
-        name.set("kmftn-binkpclient")
-        description.set("Binkp client library library")
-        url.set("https://github.com/jegornet/kmftn")
-        licenses {
-            license {
-                name.set("MIT License")
-                url.set("https://opensource.org/licenses/MIT")
-                distribution.set("repo")
-            }
-        }
-        developers {
-            developer {
-                id.set("jegornet")
-                name.set("Jegor")
-            }
-        }
-        scm {
-            url.set("https://github.com/jegornet/kmftn")
-            connection.set("scm:git:git://github.com/jegornet/kmftn.git")
-            developerConnection.set("scm:git:ssh://github.com/jegornet/kmftn.git")
-        }
-    }
 }
