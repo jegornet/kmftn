@@ -15,3 +15,4 @@ rootProject.name = "kmftn"
 include(":base")
 include(":binkpclient")
 include(":ftnpkt")
+include(":bso")

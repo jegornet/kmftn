@@ -9,6 +9,7 @@ kotlinx-datetime = "0.6.1"
 [libraries]
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlinx-io-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-io-core", version.ref = "kotlinx-io" }
 ktor-io = { group = "io.ktor", name = "ktor-io", version.ref = "ktor" }
 ktor-network = { group = "io.ktor", name = "ktor-network", version.ref = "ktor" }
