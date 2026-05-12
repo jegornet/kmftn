@@ -3,6 +3,7 @@ package net.jegor.kmftn.binkpclient
 import kotlinx.coroutines.*
 import kotlinx.io.files.Path
 import net.jegor.kmftn.base.FtnAddr
+import net.jegor.kmftn.bso.BsoOutbound
 
 /**
  * Binkp/1.0 Protocol Client Implementation
@@ -15,7 +16,7 @@ import net.jegor.kmftn.base.FtnAddr
 /**
  * Establishes a binkp client session with a remote FTN system and performs file transfer.
  *
- * @param localAddresses FTN addresses of the calling (local) system (e.g., listOf("2:5020/9999@fidonet"))
+ * @param localAddresses FTN addresses of the calling (local) system (e.g., listOf("2:550/9999@fidonet"))
  * @param localSystemName Name of the calling system
  * @param localSysopName Name of the sysop of the calling system
  * @param localLocation Location of the calling system
@@ -47,7 +48,7 @@ public suspend fun binkpClient(
     sessionPassword: String?,
     remoteHost: String,
     remotePort: Int = 24554,
-    getFilesToSend: (List<FtnAddr>, Boolean) -> List<Path>,
+    outbound: BsoOutbound,
     receiveDirectorySecure: Path,
     receiveDirectoryInsecure: Path,
     onSessionStarted: (List<FtnAddr>, Boolean) -> Unit = { _, _ -> },
@@ -93,13 +94,14 @@ public suspend fun binkpClient(
                 localFlags = localFlags,
                 remoteAddress = remoteAddress,
                 sessionPassword = sessionPassword,
-                getFilesToSend = getFilesToSend,
+                outbound = outbound,
                 receiveDirectory = receiveDirectory,
                 enableResume = enableResume,
                 requireCram = requireCram,
                 onSessionStarted = onSessionStarted,
                 onLogString = onLogString
             )
+
 
             return@coroutineScope session.run()
 

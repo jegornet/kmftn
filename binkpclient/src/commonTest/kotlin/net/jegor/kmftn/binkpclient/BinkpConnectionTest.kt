@@ -4,6 +4,9 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import net.jegor.kmftn.base.FtnAddr
+import net.jegor.kmftn.base.FtnFlavor
+import net.jegor.kmftn.bso.BsoOutbound
+import net.jegor.kmftn.bso.BsoReference
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -20,12 +23,16 @@ class BinkpConnectionTest {
 
     private lateinit var server: BinkdTestServer
     private lateinit var receiveDir: Path
+    private lateinit var outboundDir: Path
+    private lateinit var outbound: BsoOutbound
     private lateinit var addresses: AddressPair
 
     @BeforeTest
     fun setup() {
         receiveDir = createTempDirectory(prefix = "binkp-client-recv-")
+        outboundDir = createTempDirectory(prefix = "binkp-client-out-")
         addresses = AddressGenerator.generateAddressPair()
+        outbound = BsoOutbound(outboundDir, addresses.clientAddress.zone)
     }
 
     @AfterTest
@@ -36,6 +43,9 @@ class BinkpConnectionTest {
         }
         if (::receiveDir.isInitialized && SystemFileSystem.exists(receiveDir)) {
             deleteRecursively(receiveDir)
+        }
+        if (::outboundDir.isInitialized && SystemFileSystem.exists(outboundDir)) {
+            deleteRecursively(outboundDir)
         }
     }
 
@@ -61,7 +71,7 @@ class BinkpConnectionTest {
             requireCram = false,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println
@@ -103,7 +113,7 @@ class BinkpConnectionTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println
@@ -140,7 +150,7 @@ class BinkpConnectionTest {
             sessionPassword = "wrong123", // incorrect password
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println
@@ -172,7 +182,7 @@ class BinkpConnectionTest {
             requireCram = false,
             remoteHost = "127.0.0.1",
             remotePort = nonExistentPort,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             timeout = 5000, // shorter timeout
@@ -213,10 +223,7 @@ class BinkpConnectionTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { addrs, _ ->
-                callLog.add("getFilesToSend")
-                emptyList()
-            },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onSessionStarted = { addrs, _ ->
@@ -236,13 +243,13 @@ class BinkpConnectionTest {
             "onSessionStarted should receive remote address ${addresses.serverAddress}"
         )
 
-        // getFilesToSend is called once for TRF estimate, then onSessionStarted, then getFilesToSend again
         assertEquals(
-            listOf("getFilesToSend", "onSessionStarted", "getFilesToSend"),
+            listOf("onSessionStarted"),
             callLog,
-            "onSessionStarted must be called before the second getFilesToSend (after address exchange)"
+            "onSessionStarted must be called"
         )
     }
+
 
     @Test
     fun testSystemInformationExchange(): Unit = runBlocking {
@@ -270,7 +277,7 @@ class BinkpConnectionTest {
             requireCram = false,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println

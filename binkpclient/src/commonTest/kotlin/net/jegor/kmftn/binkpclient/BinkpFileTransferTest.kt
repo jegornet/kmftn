@@ -3,6 +3,9 @@ package net.jegor.kmftn.binkpclient
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import net.jegor.kmftn.base.FtnFlavor
+import net.jegor.kmftn.bso.BsoOutbound
+import net.jegor.kmftn.bso.BsoReference
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -47,10 +50,14 @@ class BinkpFileTransferTest {
             nodePassword = password)
         server.start()
 
+        val outboundDir = createTempDirectory(prefix = "binkp-client-out-")
+        val outbound = BsoOutbound(outboundDir, addresses.clientAddress.zone)
+
         val testFile = TestFileGenerator.createTextFile(
             "test-small.txt",
             "This is a test file with some content.\nLine 2\nLine 3\n"
         )
+        outbound.addReference(addresses.serverAddress, BsoReference(testFile, FtnFlavor.NORMAL))
 
         // Act
         val result = binkpClient(
@@ -63,7 +70,7 @@ class BinkpFileTransferTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> listOf(testFile) },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println
@@ -97,9 +104,16 @@ class BinkpFileTransferTest {
             nodePassword = password)
         server.start()
 
+        val outboundDir = createTempDirectory(prefix = "binkp-client-out-")
+        val outbound = BsoOutbound(outboundDir, addresses.clientAddress.zone)
+
         val file1 = TestFileGenerator.createTextFile("file1.txt", "Content of file 1")
         val file2 = TestFileGenerator.createFile("file2.dat", 1024) // 1 KB
         val file3 = TestFileGenerator.createTextFile("file3.pkt", "Packet data here")
+
+        outbound.addReference(addresses.serverAddress, BsoReference(file1, FtnFlavor.NORMAL))
+        outbound.addReference(addresses.serverAddress, BsoReference(file2, FtnFlavor.NORMAL))
+        outbound.addReference(addresses.serverAddress, BsoReference(file3, FtnFlavor.NORMAL))
 
         // Act
         val result = binkpClient(
@@ -112,7 +126,7 @@ class BinkpFileTransferTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> listOf(file1, file2, file3) },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println
@@ -146,8 +160,12 @@ class BinkpFileTransferTest {
             nodePassword = password)
         server.start()
 
+        val outboundDir = createTempDirectory(prefix = "binkp-client-out-")
+        val outbound = BsoOutbound(outboundDir, addresses.clientAddress.zone)
+
         // Create a 1 MB file
         val largeFile = TestFileGenerator.createFile("large-file.bin", 1024 * 1024)
+        outbound.addReference(addresses.serverAddress, BsoReference(largeFile, FtnFlavor.NORMAL))
 
         // Act
         val result = binkpClient(
@@ -160,7 +178,7 @@ class BinkpFileTransferTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> listOf(largeFile) },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             timeout = 60000, // 1 minute timeout for large file
@@ -193,6 +211,9 @@ class BinkpFileTransferTest {
             nodePassword = password)
         server.start()
 
+        val outboundDir = createTempDirectory(prefix = "binkp-client-out-")
+        val outbound = BsoOutbound(outboundDir, addresses.clientAddress.zone)
+
         // Put file in binkd outbound for our node
         val testFile = TestFileGenerator.createTextFile("incoming.txt", "This file comes from binkd")
         val outboundFile = server.putFileInOutbound(testFile)
@@ -211,7 +232,7 @@ class BinkpFileTransferTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println
@@ -244,6 +265,9 @@ class BinkpFileTransferTest {
             nodePassword = password)
         server.start()
 
+        val outboundDir = createTempDirectory(prefix = "binkp-client-out-")
+        val outbound = BsoOutbound(outboundDir, addresses.clientAddress.zone)
+
         // Create multiple files in binkd outbound
         val file1 = TestFileGenerator.createTextFile("recv1.txt", "File 1 from binkd")
         val file2 = TestFileGenerator.createFile("recv2.dat", 2048)
@@ -266,7 +290,7 @@ class BinkpFileTransferTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println
@@ -297,9 +321,14 @@ class BinkpFileTransferTest {
         ) // with password
         server.start()
 
+        val outboundDir = createTempDirectory(prefix = "binkp-client-out-")
+        val outbound = BsoOutbound(outboundDir, addresses.clientAddress.zone)
+
         // Files to send
         val sendFile1 = TestFileGenerator.createTextFile("send1.txt", "Sending to binkd")
         val sendFile2 = TestFileGenerator.createFile("send2.dat", 4096)
+        outbound.addReference(addresses.serverAddress, BsoReference(sendFile1, FtnFlavor.NORMAL))
+        outbound.addReference(addresses.serverAddress, BsoReference(sendFile2, FtnFlavor.NORMAL))
 
         // Files to receive from binkd
         val recvFile1 = TestFileGenerator.createTextFile("recv1.txt", "Receiving from binkd")
@@ -320,7 +349,7 @@ class BinkpFileTransferTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> listOf(sendFile1, sendFile2) },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println
@@ -355,8 +384,12 @@ class BinkpFileTransferTest {
             nodePassword = password)
         server.start()
 
+        val outboundDir = createTempDirectory(prefix = "binkp-client-out-")
+        val outbound = BsoOutbound(outboundDir, addresses.clientAddress.zone)
+
         // Create file with space in name
         val fileWithSpace = TestFileGenerator.createTextFile("test file.txt", "File with space")
+        outbound.addReference(addresses.serverAddress, BsoReference(fileWithSpace, FtnFlavor.NORMAL))
 
         // Act
         val result = binkpClient(
@@ -369,7 +402,7 @@ class BinkpFileTransferTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> listOf(fileWithSpace) },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println

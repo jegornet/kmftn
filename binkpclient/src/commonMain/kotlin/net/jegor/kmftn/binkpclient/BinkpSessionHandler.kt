@@ -9,7 +9,9 @@ import kotlinx.io.RawSource
 import kotlinx.io.RawSink
 import kotlinx.io.Buffer
 import kotlinx.io.readByteArray
+import kotlinx.io.files.SystemFileSystem
 import net.jegor.kmftn.base.FtnAddr
+import net.jegor.kmftn.bso.BsoOutbound
 
 /**
  * Handles the binkp session protocol state machine
@@ -24,7 +26,7 @@ internal class BinkpSessionHandler(
     private val localFlags: String,
     private val remoteAddress: FtnAddr,
     private val sessionPassword: String?,
-    private val getFilesToSend: (List<FtnAddr>, Boolean) -> List<Path>,
+    private val outbound: BsoOutbound,
     private val receiveDirectory: Path,
     private val enableResume: Boolean,
     private val requireCram: Boolean,
@@ -98,6 +100,11 @@ internal class BinkpSessionHandler(
             if (errorMessage == null) {
                 onLogString("+ Session completed successfully")
                 onLogString("+ Files sent: ${filesSent.size}, Files received: ${filesReceived.size}")
+                
+                // Delete BSO flow files for successfully processed addresses
+                remoteAddresses.forEach { addr ->
+                    outbound.deleteFlowFiles(addr)
+                }
             } else {
                 onLogString("- Session completed with error: $errorMessage")
             }
@@ -183,8 +190,14 @@ internal class BinkpSessionHandler(
                     val passwordProtected = sessionPassword != null && sessionPassword != "-"
                     onSessionStarted(remoteAddresses, passwordProtected)
 
-                    // Now that we know remote addresses, get files to send
-                    val filesToSend = getFilesToSend(remoteAddresses, passwordProtected)
+                    // Now that we know remote addresses, get files to send from BSO
+                    val filesToSend = mutableListOf<Path>()
+                    remoteAddresses.forEach { addr ->
+                        val link = outbound.getLink(addr)
+                        link.netmail?.let { filesToSend.add(it.path) }
+                        link.references.forEach { filesToSend.add(it.path) }
+                    }
+                    
                     val fs = FileSystemHelper.fs
                     val validFiles = filesToSend.filter { fs.exists(it) }
                     outgoingQueue = ArrayDeque(validFiles)
@@ -290,7 +303,11 @@ internal class BinkpSessionHandler(
         sendCommand(BinkpCommand.M_NUL, "TIME $timeStr")
 
         // Traffic prognosis based on called remoteAddress
-        val estimatedFiles = getFilesToSend(listOf(remoteAddress), sessionPassword != null && sessionPassword != "-")
+        val link = outbound.getLink(remoteAddress)
+        val estimatedFiles = mutableListOf<Path>()
+        link.netmail?.let { estimatedFiles.add(it.path) }
+        link.references.forEach { estimatedFiles.add(it.path) }
+        
         val pktBytes = estimatedFiles.filter { FileSystemHelper.fileName(it).endsWith(".pkt", ignoreCase = true) }
             .sumOf { FileSystemHelper.fileSize(it) }
         val otherBytes = estimatedFiles.filter { !FileSystemHelper.fileName(it).endsWith(".pkt", ignoreCase = true) }

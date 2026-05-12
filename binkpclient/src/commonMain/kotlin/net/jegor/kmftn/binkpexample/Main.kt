@@ -3,7 +3,10 @@ package net.jegor.kmftn.binkpexample
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.files.Path
 import net.jegor.kmftn.base.FtnAddr
+import net.jegor.kmftn.base.FtnFlavor
 import net.jegor.kmftn.binkpclient.binkpClient
+import net.jegor.kmftn.bso.BsoOutbound
+import net.jegor.kmftn.bso.BsoReference
 
 // ============================================================================
 // Example Usage
@@ -53,9 +56,16 @@ internal fun main(args: Array<String>) = runBlocking {
     val remotePort = optional("remote-port", "24554").toInt()
     val sendFile = parsed["send-file"]?.firstOrNull()
     val inboundDir = required("inbound-dir")
+    val outboundDir = optional("outbound-dir", "outbound")
+
+    val localAddrObj = FtnAddr.fromString(localAddr)
+    val outbound = BsoOutbound(Path(outboundDir), localAddrObj.zone)
+    if (sendFile != null) {
+        outbound.addReference(FtnAddr.fromString(remoteAddr), BsoReference(Path(sendFile), FtnFlavor.NORMAL))
+    }
 
     val result = binkpClient(
-        localAddresses = listOf(FtnAddr.fromString(localAddr)),
+        localAddresses = listOf(localAddrObj),
         localSystemName = systemName,
         localSysopName = sysopName,
         localLocation = location,
@@ -64,9 +74,7 @@ internal fun main(args: Array<String>) = runBlocking {
         sessionPassword = password,
         remoteHost = remoteHost,
         remotePort = remotePort,
-        getFilesToSend = { _, _ ->
-            if (sendFile != null) listOf(Path(sendFile)) else emptyList()
-        },
+        outbound = outbound,
         receiveDirectorySecure = Path(inboundDir),
         receiveDirectoryInsecure = Path(inboundDir),
         timeout = 120000,

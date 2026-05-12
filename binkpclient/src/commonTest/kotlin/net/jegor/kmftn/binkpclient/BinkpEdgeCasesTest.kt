@@ -3,6 +3,9 @@ package net.jegor.kmftn.binkpclient
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import net.jegor.kmftn.base.FtnFlavor
+import net.jegor.kmftn.bso.BsoOutbound
+import net.jegor.kmftn.bso.BsoReference
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -17,12 +20,16 @@ class BinkpEdgeCasesTest {
 
     private lateinit var server: BinkdTestServer
     private lateinit var receiveDir: Path
+    private lateinit var outboundDir: Path
+    private lateinit var outbound: BsoOutbound
     private lateinit var addresses: AddressPair
 
     @BeforeTest
     fun setup() {
         receiveDir = createTempDirectory(prefix = "binkp-client-recv-")
+        outboundDir = createTempDirectory(prefix = "binkp-client-out-")
         addresses = AddressGenerator.generateAddressPair()
+        outbound = BsoOutbound(outboundDir, addresses.clientAddress.zone)
     }
 
     @AfterTest
@@ -33,6 +40,9 @@ class BinkpEdgeCasesTest {
         }
         if (::receiveDir.isInitialized && SystemFileSystem.exists(receiveDir)) {
             deleteRecursively(receiveDir)
+        }
+        if (::outboundDir.isInitialized && SystemFileSystem.exists(outboundDir)) {
+            deleteRecursively(outboundDir)
         }
     }
 
@@ -57,7 +67,7 @@ class BinkpEdgeCasesTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println
@@ -83,6 +93,7 @@ class BinkpEdgeCasesTest {
         server.start()
 
         val tinyFile = TestFileGenerator.createTextFile("tiny.txt", "X")
+        outbound.addReference(addresses.serverAddress, BsoReference(tinyFile, FtnFlavor.NORMAL))
 
         // Act
         val result = binkpClient(
@@ -95,7 +106,7 @@ class BinkpEdgeCasesTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> listOf(tinyFile) },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println
@@ -122,6 +133,7 @@ class BinkpEdgeCasesTest {
 
         // Create file exactly 32767 bytes (max binkp frame data size)
         val maxFrameFile = TestFileGenerator.createFile("max-frame.dat", 32767)
+        outbound.addReference(addresses.serverAddress, BsoReference(maxFrameFile, FtnFlavor.NORMAL))
 
         // Act
         val result = binkpClient(
@@ -134,7 +146,7 @@ class BinkpEdgeCasesTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> listOf(maxFrameFile) },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println
@@ -164,6 +176,7 @@ class BinkpEdgeCasesTest {
 
         // Create file 32768 bytes (requires at least 2 frames)
         val overFrameFile = TestFileGenerator.createFile("over-frame.dat", 32768)
+        outbound.addReference(addresses.serverAddress, BsoReference(overFrameFile, FtnFlavor.NORMAL))
 
         // Act
         val result = binkpClient(
@@ -176,7 +189,7 @@ class BinkpEdgeCasesTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> listOf(overFrameFile) },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println
@@ -206,6 +219,7 @@ class BinkpEdgeCasesTest {
 
         // Create file that's exactly 3 * 32767 bytes
         val multiFrameFile = TestFileGenerator.createFile("multi-frame.dat", 32767L * 3)
+        outbound.addReference(addresses.serverAddress, BsoReference(multiFrameFile, FtnFlavor.NORMAL))
 
         // Act
         val result = binkpClient(
@@ -218,7 +232,7 @@ class BinkpEdgeCasesTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> listOf(multiFrameFile) },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println
@@ -254,7 +268,7 @@ class BinkpEdgeCasesTest {
             sessionPassword = maxPassword,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println
@@ -285,7 +299,7 @@ class BinkpEdgeCasesTest {
             sessionPassword = minPassword,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println
@@ -307,7 +321,9 @@ class BinkpEdgeCasesTest {
 
         // Create 20 small files
         val files = (1..20).map { i ->
-            TestFileGenerator.createTextFile("file-$i.txt", "Content of file $i\n")
+            val file = TestFileGenerator.createTextFile("file-$i.txt", "Content of file $i\n")
+            outbound.addReference(addresses.serverAddress, BsoReference(file, FtnFlavor.NORMAL))
+            file
         }
 
         // Act
@@ -321,7 +337,7 @@ class BinkpEdgeCasesTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> files },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             timeout = 60000,
@@ -363,7 +379,7 @@ class BinkpEdgeCasesTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println
@@ -385,6 +401,7 @@ class BinkpEdgeCasesTest {
 
         // Create file with Cyrillic characters
         val unicodeFile = TestFileGenerator.createTextFile("тест-файл.txt", "Unicode content")
+        outbound.addReference(addresses.serverAddress, BsoReference(unicodeFile, FtnFlavor.NORMAL))
 
         // Act
         val result = binkpClient(
@@ -397,7 +414,7 @@ class BinkpEdgeCasesTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> listOf(unicodeFile) },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println

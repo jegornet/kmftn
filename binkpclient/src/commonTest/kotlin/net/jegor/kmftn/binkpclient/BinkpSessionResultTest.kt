@@ -3,6 +3,9 @@ package net.jegor.kmftn.binkpclient
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import net.jegor.kmftn.base.FtnFlavor
+import net.jegor.kmftn.bso.BsoOutbound
+import net.jegor.kmftn.bso.BsoReference
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -20,6 +23,8 @@ class BinkpSessionResultTest {
     private lateinit var receiveDir: Path
     private lateinit var receiveDirSecure: Path
     private lateinit var receiveDirInsecure: Path
+    private lateinit var outboundDir: Path
+    private lateinit var outbound: BsoOutbound
     private lateinit var addresses: AddressPair
 
     @BeforeTest
@@ -27,7 +32,9 @@ class BinkpSessionResultTest {
         receiveDir = createTempDirectory(prefix = "binkp-result-test-")
         receiveDirSecure = createTempDirectory(prefix = "binkp-secure-")
         receiveDirInsecure = createTempDirectory(prefix = "binkp-insecure-")
+        outboundDir = createTempDirectory(prefix = "binkp-out-")
         addresses = AddressGenerator.generateAddressPair()
+        outbound = BsoOutbound(outboundDir, addresses.clientAddress.zone)
     }
 
     @AfterTest
@@ -36,7 +43,7 @@ class BinkpSessionResultTest {
             server.stop()
             server.cleanup()
         }
-        listOf(receiveDir, receiveDirSecure, receiveDirInsecure).forEach { dir ->
+        listOf(receiveDir, receiveDirSecure, receiveDirInsecure, outboundDir).forEach { dir ->
             if (SystemFileSystem.exists(dir)) {
                 deleteRecursively(dir)
             }
@@ -63,7 +70,7 @@ class BinkpSessionResultTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println
@@ -93,7 +100,7 @@ class BinkpSessionResultTest {
             requireCram = false,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onLogString = ::println
@@ -118,7 +125,7 @@ class BinkpSessionResultTest {
             requireCram = false,
             remoteHost = "127.0.0.1",
             remotePort = nonExistentPort,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             timeout = 5000,
@@ -153,7 +160,7 @@ class BinkpSessionResultTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDirSecure,
             receiveDirectoryInsecure = receiveDirInsecure,
             onLogString = ::println
@@ -199,7 +206,7 @@ class BinkpSessionResultTest {
             requireCram = false,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDirSecure,
             receiveDirectoryInsecure = receiveDirInsecure,
             onLogString = ::println
@@ -231,7 +238,6 @@ class BinkpSessionResultTest {
         )
         server.start()
 
-        var getFilesPasswordProtected: Boolean? = null
         var sessionStartedPasswordProtected: Boolean? = null
 
         val result = binkpClient(
@@ -244,10 +250,7 @@ class BinkpSessionResultTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, passwordProtected ->
-                getFilesPasswordProtected = passwordProtected
-                emptyList()
-            },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onSessionStarted = { _, passwordProtected ->
@@ -258,7 +261,6 @@ class BinkpSessionResultTest {
 
         assertTrue(result.success, "Session should succeed: ${result.errorMessage}")
         assertEquals(true, sessionStartedPasswordProtected, "onSessionStarted should receive passwordProtected=true")
-        assertEquals(true, getFilesPasswordProtected, "getFilesToSend should receive passwordProtected=true")
     }
 
     @Test
@@ -270,7 +272,6 @@ class BinkpSessionResultTest {
         )
         server.start()
 
-        var getFilesPasswordProtected: Boolean? = null
         var sessionStartedPasswordProtected: Boolean? = null
 
         val result = binkpClient(
@@ -284,10 +285,7 @@ class BinkpSessionResultTest {
             requireCram = false,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, passwordProtected ->
-                getFilesPasswordProtected = passwordProtected
-                emptyList()
-            },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             onSessionStarted = { _, passwordProtected ->
@@ -298,7 +296,6 @@ class BinkpSessionResultTest {
 
         assertTrue(result.success, "Session should succeed: ${result.errorMessage}")
         assertEquals(false, sessionStartedPasswordProtected, "onSessionStarted should receive passwordProtected=false")
-        assertEquals(false, getFilesPasswordProtected, "getFilesToSend should receive passwordProtected=false")
     }
 }
 

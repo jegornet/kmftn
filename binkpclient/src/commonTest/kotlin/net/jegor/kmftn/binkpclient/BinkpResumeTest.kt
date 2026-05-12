@@ -4,6 +4,9 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import net.jegor.kmftn.base.FtnFlavor
+import net.jegor.kmftn.bso.BsoOutbound
+import net.jegor.kmftn.bso.BsoReference
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -18,12 +21,16 @@ class BinkpResumeTest {
 
     private lateinit var server: BinkdTestServer
     private lateinit var receiveDir: Path
+    private lateinit var outboundDir: Path
+    private lateinit var outbound: BsoOutbound
     private lateinit var addresses: AddressPair
 
     @BeforeTest
     fun setup() {
         receiveDir = createTempDirectory(prefix = "binkp-client-recv-")
+        outboundDir = createTempDirectory(prefix = "binkp-client-out-")
         addresses = AddressGenerator.generateAddressPair()
+        outbound = BsoOutbound(outboundDir, addresses.clientAddress.zone)
     }
 
     @AfterTest
@@ -34,6 +41,9 @@ class BinkpResumeTest {
         }
         if (::receiveDir.isInitialized && SystemFileSystem.exists(receiveDir)) {
             deleteRecursively(receiveDir)
+        }
+        if (::outboundDir.isInitialized && SystemFileSystem.exists(outboundDir)) {
+            deleteRecursively(outboundDir)
         }
     }
 
@@ -76,7 +86,7 @@ class BinkpResumeTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             enableResume = true,
@@ -131,7 +141,7 @@ class BinkpResumeTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             enableResume = true,
@@ -188,7 +198,7 @@ class BinkpResumeTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             enableResume = true,
@@ -246,7 +256,7 @@ class BinkpResumeTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             enableResume = true,
@@ -309,7 +319,7 @@ class BinkpResumeTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             enableResume = true,
@@ -378,7 +388,7 @@ class BinkpResumeTest {
             sessionPassword = password,
             remoteHost = "127.0.0.1",
             remotePort = server.port,
-            getFilesToSend = { _, _ -> emptyList() },
+            outbound = outbound,
             receiveDirectorySecure = receiveDir,
             receiveDirectoryInsecure = receiveDir,
             enableResume = false,  // Disable resume

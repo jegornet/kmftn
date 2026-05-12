@@ -52,6 +52,7 @@ kotlin {
             kotlin.srcDir(generateBuildConfig)
             dependencies {
                 api(project(":base"))
+                api(project(":bso"))
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.io.core)
                 implementation(libs.ktor.io)
