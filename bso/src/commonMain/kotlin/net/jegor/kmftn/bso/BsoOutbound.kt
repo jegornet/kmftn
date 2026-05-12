@@ -237,6 +237,68 @@ public class BsoOutbound(
             }
         }
     }
+    public suspend fun setBusy(addr: FtnAddr, info: String? = null) {
+        val lock = getLock(addr)
+        lock.withLock {
+            val dir = getDirectoryForAddr(addr)
+            if (!SystemFileSystem.exists(dir)) SystemFileSystem.createDirectories(dir)
+            val path = Path(dir, "${getBaseFileName(addr)}.bsy")
+            if (SystemFileSystem.exists(path)) throw IllegalStateException("Link $addr is already busy")
+            SystemFileSystem.sink(path).buffered().use { 
+                if (info != null) it.writeString(info.take(70)) 
+            }
+        }
+    }
+
+    public suspend fun unsetBusy(addr: FtnAddr) {
+        val lock = getLock(addr)
+        lock.withLock {
+            val path = Path(getDirectoryForAddr(addr), "${getBaseFileName(addr)}.bsy")
+            if (SystemFileSystem.exists(path)) SystemFileSystem.delete(path)
+        }
+    }
+
+    public suspend fun setCalling(addr: FtnAddr, info: String? = null) {
+        val lock = getLock(addr)
+        lock.withLock {
+            val dir = getDirectoryForAddr(addr)
+            if (!SystemFileSystem.exists(dir)) SystemFileSystem.createDirectories(dir)
+            val path = Path(dir, "${getBaseFileName(addr)}.csy")
+            if (SystemFileSystem.exists(path)) throw IllegalStateException("Link $addr is already calling")
+            SystemFileSystem.sink(path).buffered().use { 
+                if (info != null) it.writeString(info.take(70)) 
+            }
+        }
+    }
+
+    public suspend fun unsetCalling(addr: FtnAddr) {
+        val lock = getLock(addr)
+        lock.withLock {
+            val path = Path(getDirectoryForAddr(addr), "${getBaseFileName(addr)}.csy")
+            if (SystemFileSystem.exists(path)) SystemFileSystem.delete(path)
+        }
+    }
+
+    public suspend fun setHold(addr: FtnAddr, untilTimestamp: Long) {
+        val lock = getLock(addr)
+        lock.withLock {
+            val dir = getDirectoryForAddr(addr)
+            if (!SystemFileSystem.exists(dir)) SystemFileSystem.createDirectories(dir)
+            val path = Path(dir, "${getBaseFileName(addr)}.hld")
+            SystemFileSystem.sink(path).buffered().use { 
+                it.writeString(untilTimestamp.toString()) 
+            }
+        }
+    }
+
+    public suspend fun unsetHold(addr: FtnAddr) {
+        val lock = getLock(addr)
+        lock.withLock {
+            val path = Path(getDirectoryForAddr(addr), "${getBaseFileName(addr)}.hld")
+            if (SystemFileSystem.exists(path)) SystemFileSystem.delete(path)
+        }
+    }
+
     public suspend fun deleteFlowFiles(addr: FtnAddr) {
         val lock = getLock(addr)
         lock.withLock {

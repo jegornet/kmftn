@@ -99,4 +99,28 @@ class BsoOutboundTest {
             outbound.addReference(addr, BsoReference(Path("fail"), FtnFlavor.NORMAL))
         }
     }
+
+    @Test
+    fun testControlFiles() = runTest {
+        val outbound = BsoOutbound(testRoot, 2)
+        val addr = FtnAddr(2, 5020, 10, 0)
+        
+        outbound.setBusy(addr, "pid 123")
+        assertTrue(outbound.getLink(addr).isBusy)
+        
+        outbound.unsetBusy(addr)
+        assertFalse(outbound.getLink(addr).isBusy)
+        
+        outbound.setCalling(addr, "calling...")
+        assertTrue(outbound.getLink(addr).isCalling)
+        
+        outbound.unsetCalling(addr)
+        assertFalse(outbound.getLink(addr).isCalling)
+        
+        outbound.setHold(addr, 1234567890L)
+        assertTrue(outbound.getLink(addr).isHold)
+        
+        outbound.unsetHold(addr)
+        assertFalse(outbound.getLink(addr).isHold)
+    }
 }
